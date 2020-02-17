@@ -1,0 +1,31 @@
+{
+    "name": "Browser Utility for Development work",
+    "version": "1.0.1",
+    "manifest_version": 2,
+    "description": "Open TortoiseSVN用のリンク生成, 現在のURLをIEで開く/文字列内のパス・URLを新しいタブで開く右クリックメニューを追加",
+    "content_scripts": [{
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/content.js"
+      ]
+    }],
+    "background" : {
+      "scripts" : [ "src/background.js" ],
+      "persistent": false
+    },
+    "permissions": [
+      "nativeMessaging",
+      "contextMenus",
+      "storage",
+      "activeTab"
+    ],
+    "options_ui": {
+      "page" : "src/options.html",
+      "open_in_tab": true,
+      "chrome_style": true
+    },
+    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlWe7JOsKmltgmqy1ZwAkJKoiUooYhUQye+ozWVzuuWKKeqjH5IqZNsn+fP33L+tCWegoThqBOSIjw09XC5z0NZtmUB5Dj+ylYOs90ku2TNwszTWD3q1tn2tCvE6aG5zpQxJybgwrH3Ho+0BisWq+jBZX16AAzntX5aOqwgnlzC54yD4D4G4wHNLOrnY7r2zphRFd4k3ZR8eZwmCsBG2M9OaD0oqYMRClDStxt8cmWSlF7T0KI772MzWGa0crG9xAXRPuu2t7nyc7ozaM4mD9jm0xxumleF/4XB0b2Nd8ajQ6mWO25DZ0k7coruHkaj50JPqSroXPjOABLGcYy/dFawIDAQAB"
+}

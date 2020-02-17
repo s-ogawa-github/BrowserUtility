@@ -1,0 +1,33 @@
+{
+    "name": "Browser Utility for Development work",
+    "version": "1.0.1",
+    "manifest_version": 2,
+    "description": "Open TortoiseSVN用のリンク生成, 現在のURLをIEで開く/文字列内のパス・URLを新しいタブで開く右クリックメニューを追加",
+    "content_scripts": [{
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/content.js"
+      ]
+    }],
+    "background" : {
+      "scripts" : [ "src/background.js" ],
+      "persistent": false
+    },
+    "permissions": [
+      "nativeMessaging",
+      "contextMenus",
+      "storage",
+      "activeTab"
+    ],
+    "options_ui": {
+      "page" : "src/options.html",
+      "open_in_tab": true,
+      "chrome_style": true
+    },
+    "applications": {
+      "gecko": {"id": "browser_utility@s.ogawa.dev"}
+    }
+}
