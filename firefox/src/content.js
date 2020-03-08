@@ -192,8 +192,13 @@ function open_file_path(options) {
                         if (option.Link_Click) {
                             if (debug) console.log('open_file_path link clicked: %s', param);
                             try {
-                                chrome.runtime.sendMessage({open_file_path: param});
-                            } catch (e) {}
+                                chrome.runtime.sendMessage({
+                                    mode: "open_file_path",
+                                    path: param
+                                });
+                            } catch (e) {
+                                console.log("Error:sendMessage[open_file_path] %o", e.message);
+                            }
                         }
                     }
                 }
@@ -234,8 +239,13 @@ function open_file_path(options) {
                 // コンテキストメニューを更新
                 if (debug) console.log('open_file_path contextmenu update: %o', lists);
                 try {
-                    chrome.runtime.sendMessage({contextmenu: "update", lists: lists});
-                } catch (e) {}
+                    chrome.runtime.sendMessage({
+                        mode: "contextmenu",
+                        lists: lists
+                    });
+                } catch (e) {
+                    console.log("Error:sendMessage[contextmenu] %o", e.message);
+                }
             }
         };
         document.body.addEventListener('mousedown', action, false);
@@ -243,15 +253,43 @@ function open_file_path(options) {
     }
 }
 
+function force_open_in_ie(options) {
+    const debug = options.Debug.Log;
+    const option = options.Open_in_IE;
+
+    if (!option) {
+        console.log("option[Open_in_IE] is not found");
+        return false;
+    }
+
+    if (option.Enable && option.Force_URL && location.href.search(new RegExp('^' + option.Force_URL, 'i')) != -1) {
+        if (debug) console.log('force Open_in_IE');
+        try {
+            chrome.runtime.sendMessage({
+                mode: "open_in_ie",
+                path: location.href
+            }, function(response) {
+                if (debug) console.log("sendMessage[open_in_ie] received");
+                window.open('about:blank','_self').close();
+            });
+        } catch (e) {
+            console.log("Error:sendMessage[open_in_ie] %o", e.message);
+        }
+    }
+}
+
 (function () {
     try {
         // ページを開くと最初にオプションを取得する
         chrome.runtime.sendMessage({
-            option: "get"
+            mode: "option"
         }, function(response) {
             if (response.options.Debug.Log) console.log("options: %o", response.options);
+            force_open_in_ie(response.options);
             make_open_tsvn_url(response.options);
             open_file_path(response.options);
         });
-    } catch (e) {}
+    } catch (e) {
+        console.log("Error:sendMessage[option] %o", e.message);
+    }
 })();

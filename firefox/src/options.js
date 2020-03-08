@@ -11,7 +11,8 @@ var options = {
         Target_Path : ''
     },
     Open_in_IE : {
-        Enable: false
+        Enable: false,
+        Force_URL : ''
     },
     Debug : {
         Log: false
@@ -32,6 +33,7 @@ function save_options() {
 
     var e_Open_in_IE = document.getElementById('Open in IE');
     options.Open_in_IE.Enable = e_Open_in_IE.getElementsByClassName('Enable')[0].checked;
+    options.Open_in_IE.Force_URL = e_Open_in_IE.getElementsByClassName('Force URL')[0].value;
 
     var e_Debug = document.getElementById('Debug');
     options.Debug.Log = e_Debug.getElementsByClassName('Log')[0].checked;
@@ -82,6 +84,7 @@ function restore_options() {
         option = items.options.Open_in_IE;
         var e_Open_in_IE = document.getElementById('Open in IE');
         e_Open_in_IE.getElementsByClassName('Enable')[0].checked = option.Enable;
+        e_Open_in_IE.getElementsByClassName('Force URL')[0].value = option.Force_URL;
 
         option = items.options.Debug;
         var e_Debug = document.getElementById('Debug');

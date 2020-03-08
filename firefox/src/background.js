@@ -15,7 +15,8 @@ let options = {
         Target_Path : ''
     },
     Open_in_IE : {
-        Enable: false
+        Enable: false,
+        Force_URL : ''
     },
     Debug : {
         Log: false
@@ -107,9 +108,11 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
                     version: HOSTAPP_VER,
                     mode: 'open_in_firefox',
                     path: encodeURI(path)
+                }, function(response) {
+                    if (debug) console.log("sendNativeMessage[open_in_firefox] rceived " + response);
                 });
             } catch (e) {
-                console.log("Error:sendNativeMessage %o", e.message);
+                console.log("Error:sendNativeMessage[open_in_firefox] %o", e.message);
             }
         }
         else {
@@ -127,9 +130,11 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
                     version: HOSTAPP_VER,
                     mode: 'open_in_ie',
                     path: encodeURI(tab.url)
+                }, function(response) {
+                    if (debug) console.log("sendNativeMessage[open_in_ie] received " + response);
                 });
             } catch (e) {
-                console.log("Error:sendNativeMessage %o", e.message);
+                console.log("Error:sendNativeMessage[open_in_ie] %o", e.message);
             }
         }
     }
@@ -137,30 +142,50 @@ chrome.contextMenus.onClicked.addListener(function (info, tab) {
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     const debug = options.Debug.Log;
-    if (request.open_file_path) {
-        // request.open_file_pathを開く
+    if (request.mode == "open_file_path") {
+        // request.pathを開く
         let agent = window.navigator.userAgent.toLowerCase();
         let firefox = (agent.indexOf('firefox') !== -1);
-        if (debug) console.log("open_file_path onMessage event: %s, %d", request.open_file_path, firefox);
+        if (debug) console.log("open_file_path onMessage event: %s, %d", request.path, firefox);
         if (firefox) {
             try {
                 chrome.runtime.sendNativeMessage("browser_utility_host_app", {
-                    open_in_firefox: encodeURI(request.open_file_path)
+                    version: HOSTAPP_VER,
+                    mode: 'open_in_firefox',
+                    path: encodeURI(request.path)
+                }, function(response) {
+                    if (debug) console.log("sendNativeMessage[open_in_firefox] received " + response);
                 });
-            } catch (e) {}
+            } catch (e) {
+                console.log("Error:sendNativeMessage[open_in_firefox] %o", e.message);
+            }
         }
         else {
             chrome.tabs.create({
-                url: request.open_file_path,
+                url: request.path,
                 index: sender.tab.index + 1,
             });
         }
     }
-    else if (request.contextmenu == "update") {
+    else if (request.mode == "open_in_ie") {
+        try {
+            chrome.runtime.sendNativeMessage("browser_utility_host_app", {
+                version: HOSTAPP_VER,
+                mode: 'open_in_ie',
+                path: request.path
+            }, function(response) {
+                if (debug) console.log("sendNativeMessage[open_in_ie] received " + response);
+                sendResponse();
+            });
+        } catch (e) {
+            console.log("Error:sendNativeMessage[open_in_ie] %o", e.message);
+        }
+    }
+    else if (request.mode == "contextmenu") {
         // request.listsの内容でコンテキストメニューを更新
         contextmenu_update(request.lists);
     }
-    else if (request.option == "get") {
+    else if (request.mode == "option") {
         // オプションを取得してcontentスクリプトに渡す&オプション有効時はコンテキストメニューを作る
         chrome.storage.local.get({
             options
