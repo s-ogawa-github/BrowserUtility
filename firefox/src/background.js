@@ -172,7 +172,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             chrome.runtime.sendNativeMessage("browser_utility_host_app", {
                 version: HOSTAPP_VER,
                 mode: 'open_in_ie',
-                path: request.path
+                path: encodeURI(request.path)
             }, function(response) {
                 if (debug) console.log("sendNativeMessage[open_in_ie] received " + response);
                 sendResponse();

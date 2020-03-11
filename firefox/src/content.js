@@ -263,7 +263,7 @@ function force_open_in_ie(options) {
     }
 
     if (option.Enable && option.Force_URL && location.href.search(new RegExp('^' + option.Force_URL, 'i')) != -1) {
-        if (debug) console.log('force Open_in_IE');
+        if (debug) console.log('force Open_in_IE %o', location.href);
         try {
             chrome.runtime.sendMessage({
                 mode: "open_in_ie",
