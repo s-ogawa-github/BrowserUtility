@@ -10,6 +10,9 @@ function make_open_tsvn_url(options) {
         return false;
     }
 
+    ////////////////////////////////////////////////////
+    // Open TortoiseSVNリンク作成
+    ////////////////////////////////////////////////////
     // 引数のaタグ要素が”[rev番号-rev番号.*|rev番号.*|log.*](option.SVN_URL)”の形式であれば、data-tsvn-info属性を付与する
     function set_attr_tsvn_info(elem) {
         const lists = [
@@ -37,12 +40,14 @@ function make_open_tsvn_url(options) {
                 set_attr_tsvn_info(elem);
             }
         }
+
         // チケット履歴内のsvnリンクをOpen TortoiseSVNリンクに変換
         if (document.getElementById('history')) {
             for (let elem of document.getElementById('history').getElementsByTagName('a')) {
                 set_attr_tsvn_info(elem);
             }
         }
+
         // チケット説明文プレビュー内のsvnリンクをOpen TortoiseSVNリンクに変換
         let observerlists = {
             'preview':false,
@@ -57,7 +62,16 @@ function make_open_tsvn_url(options) {
                 }
             });
         });
-        if (document.getElementById('content') && document.getElementById('update')) {
+        if (document.getElementById('content') && document.getElementById('content').getElementsByClassName('new_issue')) {
+            for (let key in observerlists) {
+                if (document.getElementById(key) && !observerlists[key]) {
+                    observerlists[key] = true;
+                    observer.observe(document.getElementById(key), { childList: true, });
+                    if (debug) console.log('start preview observing: %o', document.getElementById(key));
+                }
+            }
+        }
+        else if (document.getElementById('content') && document.getElementById('update')) {
             for (let elem of document.getElementById('content').getElementsByTagName('a')) {
                 if (elem.getAttribute('onclick') && elem.getAttribute('onclick').search('"update"') != -1) {
                     if (debug) console.log('make_open_tsvn_url addEventListener click :%o', elem);
@@ -103,26 +117,34 @@ function make_open_tsvn_url(options) {
         // 関係しているリビジョン内のsvnリンクからリビジョンの最小・最大番号を抽出してOpen TortoiseSVNリンクを生成
         let svnlists = [];
         for (let elem of document.getElementsByClassName('changeset')) {
-            // 例:href="http://tama:7000/svn/EC/trunk/src/test?p=リビジョン番号"の文字列から'http://tama:7000/svn/EC/trunk/src/test'を抽出(httpから?まで)
-            let url_full = elem.innerHTML.match(new RegExp('href="(' + url_base + '.*?)\\?', 'i'));
-            if (!url_full || url_full[1].search(/(\<|\>|\&|\%|\"|\'|\|)/) != -1) continue;
-            url_full = url_full[1];
+            let href = elem.getElementsByClassName('add_subversion_links_link')[0].getAttribute('href');
+            // 例:http://tama:7000/svn/EC/trunk/src/test?p=リビジョン番号 の文字列から'http://tama:7000/svn/EC/trunk/src/test'と'リビジョン番号'を抽出
+            if (href.search(new RegExp('^' + url_base, 'i')) == -1 || href.search(/(\<|\>|\&|\%|\"|\'|\|)/) != -1) continue;
+            let url_full = href.split('?p=')[0];
+            let rev = Number(href.split('?p=')[1]);
 
             // 例:href="http://tama:7000/svn/EC/trunk/src/test?p=リビジョン番号の文字列から'http://tama:7000/svn/EC/trunk'を抽出)
-            let base = elem.innerHTML.match(new RegExp('href="(' + url_base + '(.*?working\/|.*?branch\/|.*?trunk\/|.+?\/.+?\/)' + ')', 'i'));
-            if (!base) continue;
-            base = base[1].toLowerCase();
+            let svn_type = 'Branch';
+            let base = url_full.match(new RegExp(url_base + option.Branch_Path, 'i'));
+            if (!base) {
+                svn_type = 'Trunk';
+                base = url_full.match(new RegExp(url_base + option.Trunk_Path, 'i'));
+                if (!base) {
+                    svn_type = 'Working';
+                    base = url_full.match(new RegExp(url_base + option.Working_Path, 'i'));
+                    if (!base) {
+                        if (debug) console.log('not match url_full:%s', url_full);
+                        continue;
+                    }
+                }
+            }
+            base = base[0].toLowerCase();
 
-            // 例:href="http://tama:7000/svn/EC/trunk/src/test?p=リビジョン番号”の文字列から'リビジョン番号'を抽出(p=の後ろの数値)
-            let rev = elem.innerHTML.match(new RegExp('href="' + url_full + '.*?\\?p=([0-9]+)', 'i'));
-            if (!rev) continue;
-            rev = Number(rev[1]);
-
-            if (debug) console.log('url_full:%s base:%s rev:%s', url_full, base, rev);
+            if (debug) console.log('type:%s rev:%s base:%s url_full:%s', svn_type, rev, base, url_full);
 
             let match_base = svnlists.find((v) => v.base == base);
             if (match_base === undefined) {
-                svnlists.push({base:base, url:url_full, rev_max:rev, rev_min:rev});
+                svnlists.push({base:base, url:url_full, rev_max:rev, rev_min:rev, type:svn_type});
                 continue;
             }
 
@@ -134,148 +156,208 @@ function make_open_tsvn_url(options) {
                         match_base.url = match_base.url.slice(0, i).replace(/(.*)\/.*/, '$1');
                         break;
                     }
+                    else if (i == url_full.length - 1) {
+                        if (i < match_base.url.length - 1 && match_base.url[i+1] == '/') {
+                            match_base.url = match_base.url.slice(0, i+1);
+                        }
+                        else {
+                            //最長一致のurlから親ディレクトリを抽出
+                            match_base.url = match_base.url.slice(0, i+1).replace(/(.*)\/.*/, '$1');
+                        }
+                        break;
+                    }
+                    else if (i == match_base.url.length - 1) {
+                        if (i < url_full.length - 1 && url_full[i+1] == '/') {
+                            match_base.url = url_full.slice(0, i+1);
+                        }
+                        else {
+                            //最長一致のurlから親ディレクトリを抽出
+                            match_base.url = url_full.slice(0, i+1).replace(/(.*)\/.*/, '$1');
+                        }
+                        break;
+                    }
                 };
             }
             if (match_base.rev_min > rev) match_base.rev_min = rev;
             if (match_base.rev_max < rev) match_base.rev_max = rev;
         };
-        if (document.getElementById('issue-changesets')) {
-            for (let svn of svnlists) {
-                let rev_str = 'rev' + svn.rev_min;
-                if (svn.rev_min != svn.rev_max) rev_str = rev_str + '-' + svn.rev_max;
-                let elem = document.getElementById('issue-changesets').insertAdjacentElement('afterbegin', document.createElement("a"));
-                elem.setAttribute("href", svn.url);
-                elem.setAttribute("data-tsvn-info", 'tsvn[log][' + svn.rev_min + ',' + svn.rev_max + ']');
-                elem.textContent = rev_str + ' ' + svn.url;
-                elem.insertAdjacentElement('afterend', document.createElement("br"));
-            };
+        let svn_types = ["Branch", "Trunk", "Working"];
+        let open_tsvn_urls = {}
+        if (document.getElementById('issue-changesets') && svnlists.length > 0) {
+            for (let type of svn_types) {
+                let svns = svnlists.filter((v) => {return v.type == type;});
+                open_tsvn_urls[type] = new Array();
+                if (svns.length > 0) {
+                    for (let svn of svns) {
+                        let rev_str = 'rev' + svn.rev_min;
+                        if (svn.rev_min != svn.rev_max) rev_str = rev_str + '-' + svn.rev_max;
+                        let elem = document.getElementById('issue-changesets').insertAdjacentElement('afterbegin', document.createElement("a"));
+                        elem.setAttribute("href", svn.url);
+                        elem.setAttribute("data-tsvn-info", 'tsvn[log][' + svn.rev_min + ',' + svn.rev_max + ']');
+                        elem.textContent = rev_str + ' ' + svn.url;
+                        elem.insertAdjacentElement('afterend', document.createElement("br"));
+                        open_tsvn_urls[type].push( '[' + rev_str + ' ' + svn.url + '](' + svn.url + ')\n' );
+                    };
+                    let elem = document.getElementById('issue-changesets').insertAdjacentElement('afterbegin', document.createElement("label"));
+                    elem.textContent = '[' + type + ']';
+                    elem.insertAdjacentElement('afterend', document.createElement("br"));
+                }
+            }
+
+            let copy_review_comment = "Workingレビューをお願いします。\n"
+            if (svnlists.find((v) => v.type == "Branch")) {
+                copy_review_comment = "Trunk(Branch)レビューをお願いします。\n"
+            }
+            else if (svnlists.find((v) => v.type == "Trunk")) {
+                copy_review_comment = "Trunkレビューをお願いします。\n"
+            }
+            for (let type of svn_types) {
+                let urls = open_tsvn_urls[type]
+                if (urls && urls.length > 0) {
+                    copy_review_comment = copy_review_comment + "\n・" + type + "\n"
+                    for (let url of urls) {
+                        copy_review_comment = copy_review_comment + url
+                    }
+                }
+            }
+            if (debug) console.log('make_open_tsvn contextmenu update: %o', copy_review_comment);
+            chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+                if (request.mode == "copy_review_comment") {
+                    if (debug) console.log('onMessage copy_review_commente: %o', copy_review_comment);
+                    var input = document.createElement('textarea');
+                    document.body.appendChild(input);
+                    input.value = copy_review_comment;
+                    input.focus();
+                    input.select();
+                    document.execCommand('Copy');
+                    input.remove();
+                }
+            });
         }
     }
 }
 
-function open_file_path(options) {
+function make_porting_to_branch(options) {
     const debug = options.Debug.Log;
-    const option = options.Open_File_Path;
+    const option = options.Make_Porting_to_Branch;
 
     if (!option) {
-        console.log("option[Open_File_Path] is not found");
+        console.log("option[Make_Porting_to_Branch] is not found");
         return false;
     }
 
-    if (option.Enable && option.Activate_URL && option.Target_Path && option.Activate_URL && location.href.search(new RegExp('^' + option.Activate_URL, 'i')) != -1) {
-        if (debug) console.log('open_file_path');
-
-        function action(event) {
-            let elem = event.target;
-            let lists = [];
-            //if (debug) console.log('open_file_path contextmenu_event: %o, %o', event, elem);
-
-            if (!event.isTrusted) {
-                console.log('untrusted event!');
-                return;
-            }
-
-            if (['mousedown', 'click'].indexOf(event.type) != -1 && elem.tagName == 'A') {
-                // リンクがローカルファイルの場合、コンテキストメニューにリンクを追加する
-                if (elem.getAttribute('href')
-                && (elem.getAttribute('href').search(new RegExp('^' + option.Target_Path + '$', 'i')) != -1
-                ||  elem.getAttribute('href').search(new RegExp('^file:(\/){0,3}' + option.Target_Path + '$', 'i')) != -1)
-                &&  elem.getAttribute('href').search(/(\<|\>|\&|\%|\"|\'|\|)/) == -1
-                &&  elem.getAttribute('href').search(/(.bat|.exe|.vbs)$/i) == -1)
-                {
-                    let param = elem.getAttribute('href').replace(/file:(\/){0,3}/, '');
-                    if (event.type == "mousedown") {
-                        lists = [param];
-                    }
-                    else if (event.type == "click") {
-                        // オプション有効時はリンククリックでファイルを開く
-                        if (option.Link_Click) {
-                            if (debug) console.log('open_file_path link clicked: %s', param);
-                            try {
-                                chrome.runtime.sendMessage({
-                                    mode: "open_file_path",
-                                    path: param
-                                });
-                            } catch (e) {
-                                console.log("Error:sendMessage[open_file_path] %o", e.message);
-                            }
-                        }
-                    }
+    ////////////////////////////////////////////////////
+    // 分岐への移植 リスト作成
+    ////////////////////////////////////////////////////
+    let elem_porting_to_branch = '';
+    let elem_heads_up = '';
+    let make_porting_to_branch_enabled = false;
+    if (option.Enable && option.Activate_URL && option.Reference_Ticket && option.CheckBox_Name && option.InputArea_Name && location.href.search(new RegExp('^' + option.Activate_URL, 'i')) != -1) {
+        // 編集(id=update)可能なページの場合は、機能有効
+        if (document.getElementById('content') && document.getElementById('update')) {
+            make_porting_to_branch_enabled = true;
+            for (let elem of document.getElementById('all_attributes').getElementsByTagName('label')) {
+                if (elem.innerText.search(new RegExp(option.InputArea_Name)) != -1) {
+                    elem_porting_to_branch = elem.parentElement.getElementsByTagName('textarea')[0];
                 }
             }
-            else if (['mousedown'].indexOf(event.type) != -1 && ['LI', 'P', 'PRE', 'DT', 'DD', 'DIV'].indexOf(elem.tagName) != -1) {
-                // 指定要素にファイルパスがある場合、コンテキストメニューにリンクを追加する
-                for (let child of elem.childNodes) {
-                    if (child.nodeName == "#text") {
-                        let match_list = [];
-                        for (let v of child.nodeValue.split(/\r\n|\n|\r/)) {
-                            let match = v.match(/http(s){0,1}:\/\/.*?(?=\s|\>|\"|\'|$)/ig);
-                            let regexp = new RegExp('(\<|\\|)', 'ig');
-                            if (!match) {
-                                match = v.match(new RegExp(option.Target_Path, 'ig'));
-                                regexp = new RegExp('(\<|\>|\&|\%|\"|\'|\\||(.bat|.exe|.vbs)$)', 'ig');
-                            }
-                            if (match) {
-                                if (match_list.indexOf(match[0]) != -1) {
-                                    if (debug) console.log('contextmenu skip for duplication: %s', match[0]);
+            for (let elem of document.getElementById('checklist_items').children) {
+                if (elem.innerText.search(new RegExp(option.CheckBox_Name)) != -1) {
+                    elem_heads_up = elem.children[0];
+                }
+            }
+            if (!elem_porting_to_branch || !elem_heads_up) {
+                // 「分岐への移植」「注意喚起」欄が存在しない場合は無効
+                if (debug) console.log('make_porting_to_branch disable for no element %o, %o', elem_porting_to_branch, elem_heads_up);
+                make_porting_to_branch_enabled = false;
+            }
+            if (option.Excluded_Project) {
+                // 対象外プロジェクトだった場合は無効
+                if (document.getElementById('header').getElementsByClassName('current-project')[0].innerHTML.search(new RegExp(option.Excluded_Project, 'i')) != -1) {
+                    if (debug) console.log('make_porting_to_branch disable for excluded project');
+                    make_porting_to_branch_enabled = false;
+                }
+            }
+            if (option.Excluded_Status) {
+                // 対象外ステータスだった場合は無効
+                if (document.getElementById('content').getElementsByClassName('status attribute')[0].getElementsByClassName('value')[0].innerHTML.search(new RegExp(option.Excluded_Status, 'i')) != -1) {
+                    if (debug) console.log('make_porting_to_branch disable for excluded status');
+                    make_porting_to_branch_enabled = false;
+                }
+            }
+        }
+    }
+    if (make_porting_to_branch_enabled) {
+        for (let elem of document.getElementById('content').getElementsByTagName('a')) {
+            // 編集(id=update)のリンクをクリックした時に動作
+            if (elem.getAttribute('onclick') && elem.getAttribute('onclick').search('"update"') != -1) {
+                if (debug) console.log('make_porting_to_branch addEventListener click :%o', elem);
+                elem.addEventListener('click', function(event) {
+                    if (!event.isTrusted) {
+                        console.log('untrusted event!');
+                        return;
+                    }
+                    // 現在の「分岐への移植」欄の内容を読み出す
+                    if (!elem_heads_up.getAttribute('checked')) {
+                        // 「注意喚起」欄にチェックされていない場合は、現在の「分岐への移植」欄のデフォルト値で更新して終了
+                        if (debug) console.log('make_porting_to_branch disable for no check to HeadsUp');
+                        elem_porting_to_branch.value = elem_porting_to_branch.defaultValue;
+                        return;
+                    }
+                    // リファレンスチケットを一つずつ読み込む
+                    const tickets = option.Reference_Ticket.replace(/ /g, '').split(',');
+                    let porting_to_branches = Array(tickets.length);
+                    for (let i = 0; i < porting_to_branches.length; i++) {
+                        porting_to_branches[i] = ''; // 「分岐への移植」欄の記載内容初期値を空文字で設定
+                    }
+                    for (let ticket of tickets) {
+                        if (debug) console.log('make_porting_to_branch reference ticket %o', ticket);
+                        let open_url = location.href.replace(/(.*\/issues)\/.*/, '$1/' + ticket);
+                        let xhr = new XMLHttpRequest();
+                        xhr.open('GET', open_url, true);
+                        xhr.onreadystatechange = function () {
+                            if(xhr.readyState === 4 && xhr.status === 200) {
+                                let parser = new DOMParser()
+                                let xhrdoc = parser.parseFromString(xhr.responseText, "text/html")
+                                // リファレンスチケットの「分岐への移植」欄の内容を読み出す
+                                let ref_branches = '';
+                                for (let elem of xhrdoc.getElementById('all_attributes').getElementsByTagName('label')) {
+                                    if (elem.innerHTML.search('分岐への移植') != -1) {
+                                        ref_branches = elem.parentElement.getElementsByTagName('textarea')[0].value;
+                                        break;
+                                    }
                                 }
-                                else if (match[0].search(regexp) != -1) {
-                                    if (debug) console.log('contextmenu skip for illegal string: %s', match[0]);
+                                let ref_ticket = xhr.responseURL.split('issues/')[1].replace(/\/.*/, '');
+                                for (let ref_branch of ref_branches.split(/\n/)) {
+                                    if (!ref_branch) {
+                                        continue;
+                                    }
+                                    let branch_exist = false;
+                                    for (let current_branch of elem_porting_to_branch.defaultValue.split(/\n/)) {
+                                        // リファレンスチケットの「分岐への移植」欄にあるリポジトリが現在のチケットに存在している場合は、スキップ
+                                        if (ref_branch.split(':')[0] == current_branch.split(':')[0]) {
+                                            branch_exist = true;
+                                            break;
+                                        }
+                                    }
+                                    // リファレンスチケットの「分岐への移植」欄にあるリポジトリが現在のチケットに存在しない場合は、新規追加する
+                                    if (!branch_exist) {
+                                        porting_to_branches[tickets.indexOf(ref_ticket)] += ref_branch.split(':')[0] + ': (Check)\n'
+                                    }
+                                    if (debug) console.log('make_porting_to_branch ref_ticket %o, index %o', ref_ticket, tickets.indexOf(ref_ticket));
                                 }
-                                else {
-                                    match_list.push(match[0]);
-                                }
+                                if (debug) console.log('make_porting_to_branch porting_to_branches %o', porting_to_branches);
+                                // 現在のチケットの「分岐への移植」欄を更新する
+                                elem_porting_to_branch.value = elem_porting_to_branch.defaultValue + porting_to_branches.join('');
                             }
                         };
-                        if (match_list.length > 0) {
-                            if (event.type == "mousedown") {
-                                lists = match_list;
-                            }
-                        }
+                        xhr.send();
                     }
-                }
+                }, true);
             }
-            if (['mousedown'].indexOf(event.type) != -1) {
-                // コンテキストメニューを更新
-                if (debug) console.log('open_file_path contextmenu update: %o', lists);
-                try {
-                    chrome.runtime.sendMessage({
-                        mode: "contextmenu",
-                        lists: lists
-                    });
-                } catch (e) {
-                    console.log("Error:sendMessage[contextmenu] %o", e.message);
-                }
-            }
-        };
-        document.body.addEventListener('mousedown', action, false);
-        document.body.addEventListener('click', action, false);
-    }
-}
-
-function force_open_in_ie(options) {
-    const debug = options.Debug.Log;
-    const option = options.Open_in_IE;
-
-    if (!option) {
-        console.log("option[Open_in_IE] is not found");
-        return false;
-    }
-
-    if (option.Enable && option.Force_URL && location.href.search(new RegExp('^' + option.Force_URL, 'i')) != -1) {
-        if (debug) console.log('force Open_in_IE %o', location.href);
-        try {
-            chrome.runtime.sendMessage({
-                mode: "open_in_ie",
-                path: location.href
-            }, function(response) {
-                if (debug) console.log("sendMessage[open_in_ie] received");
-                window.open('about:blank','_self').close();
-            });
-        } catch (e) {
-            console.log("Error:sendMessage[open_in_ie] %o", e.message);
         }
     }
+
 }
 
 (function () {
@@ -285,9 +367,8 @@ function force_open_in_ie(options) {
             mode: "option"
         }, function(response) {
             if (response.options.Debug.Log) console.log("options: %o", response.options);
-            force_open_in_ie(response.options);
             make_open_tsvn_url(response.options);
-            open_file_path(response.options);
+            make_porting_to_branch(response.options);
         });
     } catch (e) {
         console.log("Error:sendMessage[option] %o", e.message);

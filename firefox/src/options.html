@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="utf-8"/>
         <title>Browser Utility Options</title>
         <style type="text/css">
             div.header, div.body {
@@ -27,16 +28,10 @@
                 vertical-align:top;
                 width: calc(100% - 12em) ;
             }
-            #HostAppDescripton {
-                border: 0px solid #FFFFFF;
-                padding: 0.2em;
-                background: #f5f5f5;
-                width: 45em;
-            }
         </style>
     </head>
     <body>
-        <div id="Make Open Tsvn URL">
+        <div id="Make Open-tsvn-url">
             <div class="header">
                 <strong>Make Open-tsvn-url</strong>
             </div>
@@ -53,45 +48,57 @@
                     <label>SVN URL:</label>
                     <textarea class="SVN URL" placeholder="ex. http://company.svn or (http://company.svn1|http://company.svn2)" ></textarea>
                 </div>
+                <div>
+                    <label>Branch Path:</label>
+                    <textarea class="Branch Path" placeholder="input Branch path from SVN URL" ></textarea>
+                </div>
+                <div>
+                    <label>Trunk Path:</label>
+                    <textarea class="Trunk Path" placeholder="input Trunk path from SVN URL" ></textarea>
+                </div>
+                <div>
+                    <label>Working Path:</label>
+                    <textarea class="Working Path" placeholder="input Working path from SVN URL" ></textarea>
+                </div>
+                <div>
+                    <label>ContextMenu:</label>
+                    <input class="ContextMenu" type="checkbox">
+                </div>
             </div>
         </div>
 
-        <div id="Open File Path" style="margin-top: 10px;">
+        <div id="Make Porting-to-Branch" style="margin-top: 10px;">
             <div class="header">
-                <strong>Open File Path</strong>
+                <strong>Make Porting-to-Branch</strong>
             </div>
             <div class="body">
                 <div>
                     <label>Enable:</label>
                     <input class="Enable" type="checkbox">
-                </div>
-                <div>
-                    <label>Link Click:</label>
-                    <input class="Link Click" type="checkbox">
                 </div>
                 <div>
                     <label>Activate URL:</label>
                     <textarea class="Activate URL" placeholder="ex. http://company.server or (http://company.server1|http://company.server2)" ></textarea>
                 </div>
                 <div>
-                    <label>Target Path:</label>
-                    <textarea class="Target Path" placeholder="ex. (\\\\company.server\\|Z:|Y:).*(.pdf|.txt|.xls?|.doc?|.ppt?)" ></textarea>
-                </div>
-            </div>
-        </div>
-
-        <div id="Open in IE" style="margin-top: 10px;">
-            <div class="header">
-                <strong>Open in IE</strong>
-            </div>
-            <div class="body">
-                <div>
-                    <label>Enable:</label>
-                    <input class="Enable" type="checkbox">
+                    <label>Reference Ticket:</label>
+                    <textarea class="Reference Ticket" placeholder="ex. ticket number, ticket number, ..." ></textarea>
                 </div>
                 <div>
-                    <label>Force URL:</label>
-                    <textarea class="Force URL" placeholder="ex. http://company.server or (http://company.server1|http://company.server2)" ></textarea>
+                    <label>Excluded Project:</label>
+                    <textarea class="Excluded Project" placeholder="ex. ProjectName or (ProjectName1|ProjectName2)" ></textarea>
+                </div>
+                <div>
+                    <label>Excluded Status:</label>
+                    <textarea class="Excluded Status" placeholder="ex. End or (New|End)" ></textarea>
+                </div>
+                <div>
+                    <label>CheckBox Name:</label>
+                    <textarea class="CheckBox Name" placeholder="ex. Name or (Name1|Name2)" ></textarea>
+                </div>
+                <div>
+                    <label>InputArea Name:</label>
+                    <textarea class="InputArea Name" placeholder="ex. Name or (Name1|Name2)" ></textarea>
                 </div>
             </div>
         </div>
@@ -110,21 +117,6 @@
 
         <button id="Save" style="margin-top: 10px;">Save</button>
         <div id="status"><br></div>
-
-        <div id="HostAppDescripton" style="margin-top: 10px;">
-            If use 'Open in IE' with firefox/chrome or 'Open File Path' with firefox,<br>
-            BrowserUtility-HostApp and Python Enviroment are required.<br>
-            <br>
-            BrowserUtility-HostApp:<br>
-            Open below url and download 'Source code (zip)'<br>
-            <a href="https://github.com/s-ogawa-github/BrowserUtility-HostApp/releases/latest" target="_blank" rel="noopener noreferrer">https://github.com/s-ogawa-github/BrowserUtility-HostApp/releases/latest</a><br>
-            Unzip "BrowserUtility-HostApp-Ver_*.zip" and run host_app_install.bat.<br>
-            <br>
-            Python Enviroment:<br>
-            If you don't have python enviroment, install 'python3.6' from python.org<br>
-            or download 'python.exe' from below url and move "python.exe" to hostapp/src/"python.exe".<br>
-            <a href="https://github.com/masamitsu-murase/single_binary_stackless_python/releases/tag/v3.6.8-slp-L22" target="_blank" rel="noopener noreferrer">https://github.com/masamitsu-murase/single_binary_stackless_python/releases/tag/v3.6.8-slp-L22</a><br>
-        </div>
 
         <script src="options.js"></script>
     </body>
